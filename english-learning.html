@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小小美食英語家</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
+        body { font-family: 'Fredoka One', cursive; background-color: #FFF9C4; }
+        .game-card { background: white; border-radius: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .flash-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #FFF9C4; z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="flash-screen" class="flash-screen hidden">
+        <img id="flash-img" src="" class="w-96 h-96 object-contain rounded-3xl mb-6 shadow-2xl border-4 border-white bg-white">
+        <h2 id="flash-text" class="text-4xl text-gray-800"></h2>
+    </div>
+
+    <div id="game-container" class="game-card w-full max-w-lg p-6 text-center">
+        <div id="start-screen">
+            <h1 class="text-4xl text-orange-500 mb-6">小小美食英語家</h1>
+            <div class="grid grid-cols-2 gap-4 mb-8">
+                <img src="https://cathywu0829-svg.github.io/english-learning/food/salad.png" class="rounded-xl shadow-md bg-white">
+                <img src="https://cathywu0829-svg.github.io/english-learning/food/soup.png" class="rounded-xl shadow-md bg-white">
+                <img src="https://cathywu0829-svg.github.io/english-learning/food/bread.png" class="rounded-xl shadow-md bg-white">
+                <img src="https://cathywu0829-svg.github.io/english-learning/food/pizza.png" class="rounded-xl shadow-md bg-white">
+            </div>
+            <button onclick="startGame()" class="bg-yellow-400 text-white text-2xl px-10 py-5 rounded-full shadow-lg hover:bg-yellow-500 transition">點擊開始遊戲 👆</button>
+        </div>
+
+        <div id="game-screen" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <span id="timer" class="text-3xl text-orange-500 font-bold">20s</span>
+                <div id="q-counter" class="bg-orange-100 px-4 py-2 rounded-full font-bold text-orange-600 text-lg"></div>
+            </div>
+            <img id="food-img" src="" class="w-full h-64 object-contain rounded-3xl mb-4 border-4 border-yellow-200 shadow-lg bg-white">
+            <div id="question-text" class="text-4xl tracking-widest text-gray-700 uppercase mb-2"></div>
+            <div id="cn-text" class="text-2xl text-blue-500 mb-6"></div>
+            <div id="options-grid" class="grid grid-cols-2 gap-4"></div>
+            <div class="mt-4 text-2xl">🔒</div>
+        </div>
+
+        <div id="result-screen" class="hidden p-6">
+            <h2 class="text-4xl text-orange-500 mb-6">遊戲結束！</h2>
+            <div id="wrong-list" class="text-left space-y-4 mb-6"></div>
+            <button onclick="location.reload()" class="bg-blue-500 text-white px-6 py-3 rounded-full">重新挑戰</button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {word: "SALAD", cn: "沙拉", display: "S A L _ D", options: ["A", "E", "I", "O"], answer: "A", img: "https://cathywu0829-svg.github.io/english-learning/food/salad.png"},
+            {word: "SOUP", cn: "湯", display: "S O U _", options: ["P", "B", "T", "D"], answer: "P", img: "https://cathywu0829-svg.github.io/english-learning/food/soup.png"},
+            {word: "BREAD", cn: "麵包", display: "B R E A _", options: ["D", "T", "G", "N"], answer: "D", img: "https://cathywu0829-svg.github.io/english-learning/food/bread.png"},
+            {word: "TOAST", cn: "吐司", display: "T O A S _", options: ["T", "D", "K", "R"], answer: "T", img: "https://cathywu0829-svg.github.io/english-learning/food/toast.png"},
+            {word: "HOT DOG", cn: "熱狗", display: "H O T D O _", options: ["G", "B", "P", "K"], answer: "G", img: "https://cathywu0829-svg.github.io/english-learning/food/hot%20dog.png"},
+            {word: "SANDWICH", cn: "三明治", display: "S A N D W I C _", options: ["H", "K", "T", "D"], answer: "H", img: "https://cathywu0829-svg.github.io/english-learning/food/sandwich.png"},
+            {word: "HAMBURGER", cn: "漢堡", display: "H A M B U R G E _", options: ["R", "L", "T", "N"], answer: "R", img: "https://cathywu0829-svg.github.io/english-learning/food/hamburger.png"},
+            {word: "PIZZA", cn: "披薩", display: "P I Z Z _", options: ["A", "E", "O", "U"], answer: "A", img: "https://cathywu0829-svg.github.io/english-learning/food/pizza.png"},
+            {word: "CHEESE", cn: "起司", display: "C H E E S _", options: ["E", "A", "O", "I"], answer: "E", img: "https://cathywu0829-svg.github.io/english-learning/food/cheese.png"},
+            {word: "SPAGHETTI", cn: "義大利麵", display: "S P A G H E T T _", options: ["I", "E", "A", "O"], answer: "I", img: "https://cathywu0829-svg.github.io/english-learning/food/spaghetti.png"}
+        ];
+
+        let currentQ = 0, timer = 20, countdown, wrongAnswers = [];
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            showFlash();
+        }
+
+        function showFlash() {
+            const q = questions[currentQ];
+            document.getElementById('q-counter').innerText = "第 " + (currentQ + 1) + " 題";
+            document.getElementById('flash-img').src = q.img;
+            document.getElementById('flash-text').innerText = q.word + " (" + q.cn + ")";
+            document.getElementById('flash-screen').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('flash-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                loadQuestion();
+            }, 2000);
+        }
+
+        function loadQuestion() {
+            timer = 20;
+            const q = questions[currentQ];
+            document.getElementById('food-img').src = q.img;
+            document.getElementById('question-text').innerText = q.display;
+            document.getElementById('cn-text').innerText = "{" + q.cn + "}";
+            document.getElementById('timer').innerText = timer + "s";
+            
+            const grid = document.getElementById('options-grid');
+            grid.innerHTML = '';
+            q.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = "bg-blue-400 text-white p-4 rounded-xl text-2xl font-bold hover:bg-blue-500";
+                btn.innerText = opt;
+                btn.onclick = () => {
+                    clearInterval(countdown);
+                    if (opt === q.answer) {
+                        currentQ++;
+                        if (currentQ < questions.length) showFlash(); else showResults();
+                    } else {
+                        wrongAnswers.push(q);
+                        currentQ++;
+                        if (currentQ < questions.length) showFlash(); else showResults();
+                    }
+                };
+                grid.appendChild(btn);
+            });
+
+            countdown = setInterval(() => {
+                timer--;
+                document.getElementById('timer').innerText = timer + "s";
+                if (timer <= 0) { clearInterval(countdown); wrongAnswers.push(q); currentQ++; if(currentQ < questions.length) showFlash(); else showResults(); }
+            }, 1000);
+        }
+
+        function showResults() {
+            document.getElementById('game-screen').classList.add('hidden');
+            const list = document.getElementById('wrong-list');
+            if (wrongAnswers.length === 0) list.innerHTML = "太棒了！全對！";
+            else {
+                list.innerHTML = "需要加強的單字：<br>";
+                wrongAnswers.forEach(q => {
+                    list.innerHTML += `<div class='flex items-center gap-4 bg-gray-50 p-2 rounded'><img src='${q.img}' class='w-12 h-12'> ${q.word} {${q.cn}}</div>`;
+                });
+            }
+            document.getElementById('result-screen').classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
